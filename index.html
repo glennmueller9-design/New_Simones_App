@@ -1,0 +1,595 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Purzelhuus Menüplaner Pro</title>
+<meta name="theme-color" content="#6dbb45">
+<link rel="manifest" href="manifest.webmanifest?v=16"><link rel="apple-touch-icon" href="icon.svg">
+<style>
+:root{--green:#68b342;--blue:#2f7ed8;--orange:#ff8a26;--yellow:#ffc928;--purple:#6e3bbf;--dark:#26351f;--soft:#fffdf7;--line:#e8e1d4;--ok:#e7f6df;--warn:#fff1c7;--bad:#ffd8d8}
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:var(--soft);color:var(--dark)}
+header{background:white;padding:12px 14px 18px;border-bottom:4px solid var(--green);box-shadow:0 3px 14px rgba(0,0,0,.08);position:sticky;top:0;z-index:10}
+.logo{width:100%;max-height:115px;object-fit:contain;display:block;margin:auto}.title{text-align:center;font-size:30px;font-weight:800;color:#3b8c34;margin-top:4px}.title span{color:var(--purple)}
+main{max-width:1150px;margin:auto;padding:14px}.card{background:white;border-radius:22px;padding:15px;margin:12px 0;box-shadow:0 5px 18px rgba(0,0,0,.07);border:1px solid #f1eadf}
+.tabs{display:flex;gap:7px;overflow:auto}.tab{white-space:nowrap}.hidden{display:none}
+button{border:0;border-radius:16px;padding:12px 14px;font-weight:750;font-size:15px;background:var(--green);color:#10200b;margin:4px}
+button.blue{background:#dcecff}button.orange{background:#ffe4cc}button.purple{background:#eadfff}button.yellow{background:#fff0b6}button.red{background:#ffd8d8}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}.days{grid-template-columns:repeat(auto-fit,minmax(205px,1fr))}
+.day{padding:0;overflow:hidden}.day h3{margin:0;padding:10px;color:white}.d0 h3{background:var(--blue)}.d1 h3{background:var(--orange)}.d2 h3{background:var(--green)}.d3 h3{background:var(--purple)}.d4 h3{background:var(--yellow);color:#2c2c14}
+.meal{padding:10px;border-bottom:1px solid var(--line)}.meal b{display:block;color:#267326;font-size:13px;margin-bottom:4px}
+#instaCanvas{touch-action:none}
+select,input,textarea{width:100%;padding:10px;border:1px solid #d6d0c4;border-radius:12px;font-size:15px;background:white}textarea{min-height:80px}
+.metric{border-radius:18px;padding:12px;background:#f2f8ed}.metric b{font-size:25px;display:block}.ok{background:var(--ok)}.warn{background:var(--warn)}.bad{background:var(--bad)}
+.small{font-size:13px;color:#5b6654}.pill{display:inline-block;border-radius:999px;background:#edf6e6;padding:5px 9px;margin:2px;font-size:12px}
+.chooser{margin-top:4px}
+.chooserInput{margin-bottom:6px;background:#fffdf7}
+.chooser select{max-height:44px}.sectionTitle{margin:5px 0 12px}
+table{width:100%;border-collapse:collapse}td,th{padding:9px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{background:#f6f2e8}
+@media(max-width:720px){.title{font-size:24px}.logo{max-height:80px}.grid.days{display:block}.day{margin:12px 0}}
+@media print{
+  header,.tabs,.card button,.small,.chooserInput,select,#warnings,#metrics{display:none!important}
+  body{background:white}
+  .card{box-shadow:none;border:1px solid #ccc;break-inside:avoid}
+  main{padding:0}
+  .meal{font-size:13px}
+}
+</style>
+</head>
+<body>
+<header>
+<img class="logo" src="purzelhuus-logo.jpeg" alt="Purzelhuus Logo">
+<div class="title">Purzelhuus <span>Menüplaner</span> Pro</div>
+</header>
+<main>
+<div class="card tabs">
+<button class="tab" data-page="plan">Wochenplan</button>
+<button class="tab orange" data-page="instagram">Instagram</button>
+<button class="tab blue" data-page="shopping">Einkaufsliste</button>
+<button class="tab orange" data-page="recipes">Rezepte</button>
+<button class="tab purple" data-page="add">Menü erfassen</button>
+<button class="tab yellow" data-page="database">Datenbank</button>
+<button class="tab blue" data-page="export">Export</button>
+</div>
+
+<section id="plan" class="page">
+<div class="card">
+<button id="newWeek">Neue Woche automatisch erstellen</button>
+<button class="orange" id="instaPlan">Instagram-Story</button>
+<button class="blue" id="wordPlan">Word</button>
+<button class="purple" id="pdfPlan">PDF / Drucken</button>
+<button class="yellow" id="mailPlan">Mail an Glenn</button>
+<p class="small">Logik: 2 Fleischgerichte, 1 Fischgericht, 2 Vegi-Gerichte. Fleisch- und Vegivariante bleiben kompatibel.</p><p class="small" id="cloudStatus">Cloud wird geladen...</p>
+</div>
+<div id="week" class="grid days"></div>
+<div class="card">
+<h2 class="sectionTitle">Ernährungs-Check</h2>
+<div id="metrics" class="grid"></div>
+<div id="warnings"></div>
+</div>
+<div class="card"><h2>Elterntext</h2><p id="parentText"></p></div>
+</section>
+
+<section id="instagram" class="page hidden">
+<div class="card">
+<h2>Instagram-Story</h2>
+<p class="small">Hochformat 1080 × 1920. Nach dem Erstellen kannst du das Bild speichern und auf Instagram verwenden.</p>
+<button id="makeInsta">Instagram-Bild erstellen</button>
+<button class="blue" id="downloadInsta">PNG herunterladen</button>
+<br><br>
+<canvas id="instaCanvas" width="1080" height="1920" style="width:100%;max-width:540px;border-radius:24px;box-shadow:0 5px 18px rgba(0,0,0,.12);background:#fff"></canvas>
+</div>
+</section>
+
+<section id="shopping" class="page hidden">
+<div class="card"><h2>Einkaufsliste</h2><button id="copyShopping">Einkaufsliste kopieren</button><button class="orange" id="csvShopping">CSV</button><div id="shoppingList"></div></div>
+</section>
+
+<section id="recipes" class="page hidden">
+<div class="card"><h2>Rezepte</h2><p class="small">Wähle ein Menü aus der aktuellen Woche. Eigene Rezepte können bei der Menüerfassung gespeichert werden.</p><select id="recipeSelect"></select><div id="recipeBox" class="card"></div></div>
+</section>
+
+<section id="add" class="page hidden">
+<div class="card"><h2>Neues Menü erfassen</h2>
+<label>Kategorie</label><select id="addCat"><option value="morgenessen">Morgenessen</option><option value="mittagessen">Mittagessen-Gruppe</option><option value="zvieri">Z'Vieri</option></select><br><br>
+<div id="simpleFields">
+<label>Name</label><input id="addName" placeholder="z.B. Porridge mit Apfel"><br><br>
+</div>
+<div id="lunchFields" class="hidden">
+<label>Gruppentitel</label><input id="addTitle" placeholder="z.B. Pasta Bolognese"><br><br>
+<label>Fleisch-/Fischvariante</label><input id="addMeat" placeholder="z.B. Spaghetti Bolognese"><br><br>
+<label>Vegi-Variante</label><input id="addVegi" placeholder="z.B. Spaghetti mit Vegihack"><br><br>
+<label>Typ</label><select id="addType"><option value="meat">Fleisch</option><option value="fish">Fisch</option><option value="vegi">Vegi</option></select><br><br>
+</div>
+<label>Zutaten / Einkauf</label><textarea id="addIngredients" placeholder="z.B. Pasta, Tomaten, Hackfleisch, Vegihack, Rüebli"></textarea><br><br>
+<label>Rezept / Zubereitung</label><textarea id="addRecipe" placeholder="Kurze Zubereitung"></textarea><br><br>
+<div class="grid">
+<label><input type="checkbox" class="tagbox" value="gemuese"> Gemüse</label>
+<label><input type="checkbox" class="tagbox" value="protein"> Protein</label>
+<label><input type="checkbox" class="tagbox" value="hafer"> Hafer</label>
+<label><input type="checkbox" class="tagbox" value="frucht"> Frucht</label>
+<label><input type="checkbox" class="tagbox" value="suess"> Süss</label>
+<label><input type="checkbox" class="tagbox" value="verarbeitet"> Verarbeitet</label>
+</div><br>
+<button id="saveMenu">Menü speichern</button><button class="red" id="resetData">Lokale Änderungen zurücksetzen</button>
+</div>
+</section>
+
+<section id="database" class="page hidden">
+<div class="card"><h2>Datenbank</h2><input id="searchDb" placeholder="Suchen..."><div id="dbStats" class="grid"></div><div id="dbList"></div></div>
+</section>
+
+<section id="export" class="page hidden">
+<div class="card"><h2>Daten sichern</h2><button id="downloadDb">Datenbank herunterladen</button><button class="yellow" id="migrateData">Alte Daten suchen & übernehmen</button><button class="blue" id="syncCloud">Lokale Daten in Supabase hochladen</button><button class="orange" id="reloadCloud">Aus Supabase neu laden</button><button class="blue" id="copyDb">Datenbank kopieren</button><textarea id="importBox" placeholder="JSON hier einfügen"></textarea><button id="importDb">Importieren</button></div>
+</section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="data.js?v=16"></script>
+<script>
+(function(){
+const days=["Montag","Dienstag","Mittwoch","Donnerstag","Freitag"];
+let DATA=loadData(), plan=[];
+const SUPABASE_URL="https://uhizczhzbrtelaujhusk.supabase.co";
+const SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVoaXpjemh6YnJ0ZWxhdWpodXNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MjI4MzAsImV4cCI6MjA5NTk5ODgzMH0.2CiNl3vpf_44RVjMSM7nGWfP1r7UDikBXY8st-BlCUU";
+const sb = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+let cloudReady=false;
+function clone(x){return JSON.parse(JSON.stringify(x))}
+function $(id){return document.getElementById(id)}
+function mergeUnique(base, incoming){
+ if(!incoming){return base}
+ function addUnique(arr,item,key){
+   if(!item){return}
+   const val=String(item[key]||"").toLowerCase().trim();
+   if(!val){return}
+   if(!arr.some(x=>String(x[key]||"").toLowerCase().trim()===val)){
+     arr.push(item);
+   }
+ }
+ ["morgenessen","zvieri"].forEach(cat=>{
+   if(Array.isArray(incoming[cat])){
+     incoming[cat].forEach(item=>{
+       if(typeof item==="string"){item={name:item,tags:[]}}
+       addUnique(base[cat],item,"name");
+     });
+   }
+ });
+ if(Array.isArray(incoming.mittagessen)){
+   incoming.mittagessen.forEach(item=>addUnique(base.mittagessen,item,"title"));
+ }
+ return base;
+}
+function migrateOldData(){
+ let merged=clone(DEFAULT_DATA);
+ const keys=[
+   "purzelDataV16","purzelDataV16","purzelDataV16","purzelDataV16","purzelDataV16","purzelDataV16",
+   "purzelhuusMenusV3","purzelhuusMenusV2"
+ ];
+ let found=false;
+ keys.forEach(k=>{
+   try{
+     const raw=localStorage.getItem(k);
+     if(!raw){return}
+     const old=JSON.parse(raw);
+     if(old.morgenessen || old.mittagessen || old.zvieri){
+       merged=mergeUnique(merged,old);
+       found=true;
+     }
+     if(old.fleisch || old.vegi){
+       if(Array.isArray(old.morgenessen)){
+         old.morgenessen.forEach(item=>{
+           if(typeof item==="string"){item={name:item,tags:[]}}
+           merged=mergeUnique(merged,{morgenessen:[item]});
+         });
+       }
+       if(Array.isArray(old.zvieri)){
+         old.zvieri.forEach(item=>{
+           if(typeof item==="string"){item={name:item,tags:[]}}
+           merged=mergeUnique(merged,{zvieri:[item]});
+         });
+       }
+       if(Array.isArray(old.fleisch)){
+         old.fleisch.forEach(item=>{
+           if(typeof item==="string"){item={name:item,tags:[]}}
+           const name=item.name||item.title||"Unbenanntes Fleischmenü";
+           const group={title:name, type:(item.tags||[]).includes("fisch")?"fish":"meat", meat:name, vegi:"Vegi-Alternative zu "+name, tags:item.tags||["fleisch"], ingredients:item.ingredients||"", recipe:item.recipe||""};
+           merged=mergeUnique(merged,{mittagessen:[group]});
+         });
+       }
+       if(Array.isArray(old.vegi)){
+         old.vegi.forEach(item=>{
+           if(typeof item==="string"){item={name:item,tags:[]}}
+           const name=item.name||item.title||"Unbenanntes Vegimenü";
+           const group={title:name, type:"vegi", meat:name, vegi:name, tags:item.tags||["vegi"], ingredients:item.ingredients||"", recipe:item.recipe||""};
+           merged=mergeUnique(merged,{mittagessen:[group]});
+         });
+       }
+       found=true;
+     }
+   }catch(e){}
+ });
+ if(found){
+   localStorage.setItem("purzelDataV16",JSON.stringify(merged));
+   localStorage.setItem("purzelDataBackup_"+new Date().toISOString().slice(0,10),JSON.stringify(merged));
+ }
+ return merged;
+}
+function loadData(){
+ try{
+   let s=localStorage.getItem("purzelDataV16");
+   if(s){return JSON.parse(s)}
+ }catch(e){}
+ return migrateOldData();
+}
+function saveData(){localStorage.setItem("purzelDataV16",JSON.stringify(DATA))}
+function choice(a){return a[Math.floor(Math.random()*a.length)]}
+function has(o,t){return (o.tags||[]).includes(t)}
+function uniquePick(arr, used, filter){let pool=arr.filter(x=>!used.has(x.name||x.title)); if(filter){let f=pool.filter(filter); if(f.length)pool=f} if(!pool.length)pool=arr; let item=choice(pool); used.add(item.name||item.title); return item}
+
+function cloudStatus(msg, good=true){
+ const el=$("cloudStatus");
+ if(el){el.textContent=msg; el.style.color=good?"#267326":"#b00020";}
+}
+function normalizeArrayField(v){
+ if(Array.isArray(v)) return v;
+ if(typeof v==="string" && v.trim()){
+   return v.split(",").map(x=>x.trim()).filter(Boolean);
+ }
+ return [];
+}
+function cloudToData(rowsM,rowsL,rowsZ){
+ return {
+   morgenessen:(rowsM||[]).map(x=>({name:x.name,tags:normalizeArrayField(x.tags),recipe:x.recipe||"",ingredients:x.ingredients||""})),
+   mittagessen:(rowsL||[]).map(x=>({title:x.title,type:x.type||"vegi",meat:x.meat||x.title,vegi:x.vegi||x.title,tags:normalizeArrayField(x.tags),recipe:x.recipe||"",ingredients:x.ingredients||""})),
+   zvieri:(rowsZ||[]).map(x=>({name:x.name,tags:normalizeArrayField(x.tags),recipe:x.recipe||"",ingredients:x.ingredients||""}))
+ };
+}
+async function loadFromCloud(){
+ if(!sb){cloudStatus("Supabase konnte nicht geladen werden.",false);return false;}
+ try{
+   cloudStatus("Cloud wird geladen...");
+   const [m,l,z]=await Promise.all([
+     sb.from("morgenessen").select("*").order("name"),
+     sb.from("mittagessen").select("*").order("title"),
+     sb.from("zvieri").select("*").order("name")
+   ]);
+   if(m.error||l.error||z.error){throw new Error((m.error||l.error||z.error).message)}
+   const hasCloud=(m.data&&m.data.length)||(l.data&&l.data.length)||(z.data&&z.data.length);
+   if(hasCloud){
+     DATA=cloudToData(m.data,l.data,z.data);
+     saveData();
+     cloudReady=true;
+     cloudStatus("Cloud verbunden. Menüs aus Supabase geladen.");
+   } else {
+     cloudReady=true;
+     cloudStatus("Cloud verbunden. Supabase ist noch leer. Lokale Standarddaten aktiv.");
+   }
+   generatePlan();
+   return true;
+ }catch(e){
+   cloudStatus("Cloud-Fehler: "+e.message,false);
+   return false;
+ }
+}
+async function insertCloud(table,row){
+ if(!sb)return {error:{message:"Supabase nicht geladen"}};
+ return await sb.from(table).insert(row);
+}
+async function saveNewMenuToCloud(cat,item){
+ if(!sb)return false;
+ try{
+   if(cat==="morgenessen"){
+     const res=await insertCloud("morgenessen",{name:item.name,tags:item.tags||[],recipe:item.recipe||"",ingredients:String(item.ingredients||"")});
+     if(res.error)throw new Error(res.error.message);
+   } else if(cat==="zvieri"){
+     const res=await insertCloud("zvieri",{name:item.name,tags:item.tags||[],recipe:item.recipe||"",ingredients:String(item.ingredients||"")});
+     if(res.error)throw new Error(res.error.message);
+   } else if(cat==="mittagessen"){
+     const res=await insertCloud("mittagessen",{title:item.title,type:item.type,meat:item.meat,vegi:item.vegi,tags:item.tags||[],recipe:item.recipe||"",ingredients:String(item.ingredients||"")});
+     if(res.error)throw new Error(res.error.message);
+   }
+   cloudStatus("Menü in Supabase gespeichert.");
+   return true;
+ }catch(e){
+   cloudStatus("Speichern in Supabase fehlgeschlagen: "+e.message,false);
+   return false;
+ }
+}
+async function uploadLocalToCloud(){
+ if(!sb){alert("Supabase nicht geladen.");return}
+ if(!confirm("Lokale Daten in Supabase hochladen?")){return}
+ try{
+   cloudStatus("Upload läuft...");
+   const m=DATA.morgenessen.map(x=>({name:x.name,tags:x.tags||[],recipe:x.recipe||"",ingredients:String(x.ingredients||"")}));
+   const l=DATA.mittagessen.map(x=>({title:x.title,type:x.type,meat:x.meat,vegi:x.vegi,tags:x.tags||[],recipe:x.recipe||"",ingredients:String(x.ingredients||"")}));
+   const z=DATA.zvieri.map(x=>({name:x.name,tags:x.tags||[],recipe:x.recipe||"",ingredients:String(x.ingredients||"")}));
+   const [rm,rl,rz]=await Promise.all([
+     sb.from("morgenessen").upsert(m,{onConflict:"name"}),
+     sb.from("mittagessen").upsert(l,{onConflict:"title"}),
+     sb.from("zvieri").upsert(z,{onConflict:"name"})
+   ]);
+   if(rm.error||rl.error||rz.error){throw new Error((rm.error||rl.error||rz.error).message)}
+   cloudStatus("Lokale Daten wurden in Supabase hochgeladen.");
+   alert("Upload abgeschlossen.");
+ }catch(e){
+   cloudStatus("Upload fehlgeschlagen: "+e.message,false);
+   alert("Upload fehlgeschlagen: "+e.message+"\\n\\nFühre bitte das Zusatz-SQL für eindeutige Namen aus.");
+ }
+}
+
+function generatePlan(){
+ const used=new Set();
+ const patterns=[
+  ["vegi","meat","vegi","fish","meat"],
+  ["meat","vegi","fish","vegi","meat"],
+  ["vegi","fish","meat","vegi","meat"]
+ ];
+ const pattern=choice(patterns);
+ plan=days.map((day,i)=>{
+   const morgen=uniquePick(DATA.morgenessen, used, x=> i%2? (has(x,"hafer")||has(x,"frucht")||has(x,"protein")) : true);
+   let lunch=uniquePick(DATA.mittagessen, used, x=>x.type===pattern[i]);
+   const zvieri=uniquePick(DATA.zvieri, used, x=> (i===0||i===3) ? has(x,"gemuese") : !has(x,"suess"));
+   return {day,morgen,lunch,zvieri,type:pattern[i]};
+ });
+ renderAll();
+}
+function renderAll(){
+ const wrap=$("week"); wrap.innerHTML="";
+ plan.forEach((p,i)=>{
+  let card=document.createElement("div"); card.className="card day d"+i;
+  card.innerHTML=`<h3>${p.day}</h3>
+  <div class="meal"><b>Morgenessen</b><div class="chooser" data-i="${i}" data-k="morgen"></div></div>
+  <div class="meal"><b>Mittagessen ${p.type==="meat"?"Fleisch":p.type==="fish"?"Fisch":"Vegi"}</b><div class="chooser" data-i="${i}" data-k="lunch"></div><p><b>Fleisch/Fisch:</b><br>${esc(p.lunch.meat)}</p><p><b>Vegi:</b><br>${esc(p.lunch.vegi)}</p></div>
+  <div class="meal"><b>Z'Vieri</b><div class="chooser" data-i="${i}" data-k="zvieri"></div></div>`;
+  wrap.appendChild(card);
+ });
+ document.querySelectorAll(".chooser").forEach(makeChooser);
+ renderMetrics(); renderShopping(); renderRecipes();
+}
+function getListForKey(k){
+ if(k==="morgen") return DATA.morgenessen.map(x=>({label:x.name,value:x.name}));
+ if(k==="zvieri") return DATA.zvieri.map(x=>({label:x.name,value:x.name}));
+ return DATA.mittagessen.map(x=>({label:x.title+" · "+x.meat+" / "+x.vegi,value:x.title}));
+}
+function getCurrentValue(i,k){
+ if(k==="morgen") return plan[i].morgen.name;
+ if(k==="zvieri") return plan[i].zvieri.name;
+ return plan[i].lunch.title;
+}
+function makeChooser(box){
+ const i=+box.dataset.i, k=box.dataset.k;
+ const all=getListForKey(k);
+ const input=document.createElement("input");
+ input.className="chooserInput";
+ input.placeholder="Suchen...";
+ const select=document.createElement("select");
+ select.dataset.i=i; select.dataset.k=k;
+ box.appendChild(input); box.appendChild(select);
+ function fill(q){
+   q=(q||"").toLowerCase();
+   let filtered=all.filter(x=>x.label.toLowerCase().includes(q)).slice(0,80);
+   if(!filtered.length) filtered=all.slice(0,80);
+   const current=getCurrentValue(i,k);
+   select.innerHTML=filtered.map(x=>`<option value="${esc(x.value)}" ${x.value===current?"selected":""}>${esc(x.label)}</option>`).join("");
+   if(!filtered.some(x=>x.value===current)){
+     select.insertAdjacentHTML("afterbegin",`<option selected value="${esc(current)}">${esc(current)}</option>`);
+   }
+ }
+ input.addEventListener("input",()=>fill(input.value));
+ select.addEventListener("change",changeSelect);
+ fill("");
+}
+function changeSelect(e){
+ const i=+e.target.dataset.i, k=e.target.dataset.k, val=e.target.value;
+ if(k==="morgen") plan[i].morgen=DATA.morgenessen.find(x=>x.name===val) || plan[i].morgen;
+ if(k==="zvieri") plan[i].zvieri=DATA.zvieri.find(x=>x.name===val) || plan[i].zvieri;
+ if(k==="lunch"){plan[i].lunch=DATA.mittagessen.find(x=>x.title===val) || plan[i].lunch; plan[i].type=plan[i].lunch.type}
+ renderAll();
+}
+function tags(){let out=[]; plan.forEach(p=>{out.push(...(p.morgen.tags||[]),...(p.lunch.tags||[]),...(p.zvieri.tags||[]))}); return out}
+function count(t){return tags().filter(x=>x===t).length}
+function renderMetrics(){
+ const meat=plan.filter(p=>p.type==="meat").length, fish=plan.filter(p=>p.type==="fish").length, veg=plan.filter(p=>p.type==="vegi").length;
+ const metrics=[["Fleischgerichte",meat,meat<=2?"ok":"bad"],["Fischgerichte",fish,fish>=1?"ok":"warn"],["Vegi-Tage",veg,veg>=2?"ok":"warn"],["Gemüse",count("gemuese"),count("gemuese")>=6?"ok":"warn"],["Hafer/Frucht Frühstück",count("hafer")+count("frucht"),count("hafer")+count("frucht")>=3?"ok":"warn"],["Süsse Z'Vieri",count("suess"),count("suess")<=2?"ok":"warn"]];
+ $("metrics").innerHTML=metrics.map(m=>`<div class="metric ${m[2]}"><span>${m[0]}</span><b>${m[1]}</b></div>`).join("");
+ let w=[]; if(meat>2)w.push("Zu viele Fleischgerichte."); if(fish<1)w.push("Ein Fischgericht wäre sinnvoll."); if(veg<2)w.push("Mehr Vegi-Tage einplanen."); if(count("suess")>2)w.push("Zu viele süsse Z'Vieri.");
+ $("warnings").innerHTML=w.length?`<div class="card bad">${w.join(" ")}</div>`:`<div class="card ok">Die Woche ist ausgewogen und küchentauglich geplant.</div>`;
+ const sample=plan.map(p=>p.lunch.title).join(", ");
+ $("parentText").textContent=`Diese Woche gibt es im Purzelhuus eine abwechslungsreiche Menüwoche mit ${sample}. Die Fleisch- und Vegivarianten sind jeweils passend aufeinander abgestimmt.`;
+}
+function renderShopping(){
+ let items=[];
+ plan.forEach(p=>{items.push(p.morgen.name, p.lunch.ingredients||p.lunch.title, p.zvieri.name)});
+ $("shoppingList").innerHTML="<ul>"+items.flatMap(x=>String(x).split(",")).map(x=>`<li>${esc(x.trim())}</li>`).join("")+"</ul>";
+}
+function renderRecipes(){
+ let sel=$("recipeSelect"); if(!sel)return;
+ let opts=[]; plan.forEach(p=>{opts.push(["Morgenessen: "+p.morgen.name,p.morgen.recipe,p.morgen.ingredients]); opts.push(["Mittag: "+p.lunch.title,p.lunch.recipe,p.lunch.ingredients]); opts.push(["Z'Vieri: "+p.zvieri.name,p.zvieri.recipe,p.zvieri.ingredients])});
+ sel.innerHTML=opts.map((o,i)=>`<option value="${i}">${esc(o[0])}</option>`).join("");
+ sel.onchange=()=>{let o=opts[+sel.value];$("recipeBox").innerHTML=`<h3>${esc(o[0])}</h3><p><b>Zutaten:</b> ${esc(Array.isArray(o[2])?o[2].join(", "):o[2]||"Noch nicht erfasst")}</p><p><b>Zubereitung:</b> ${esc(o[1]||"Noch nicht erfasst")}</p>`}; sel.onchange();
+}
+async function saveMenu(){
+ const cat=$("addCat").value, tags=[...document.querySelectorAll(".tagbox:checked")].map(x=>x.value);
+ let savedItem=null, cloudCat=cat;
+ if(cat==="mittagessen"){
+  let title=$("addTitle").value.trim(), meat=$("addMeat").value.trim(), vegi=$("addVegi").value.trim(), type=$("addType").value;
+  if(!title||!meat||!vegi){alert("Bitte Titel, Fleisch/Fischvariante und Vegivariante erfassen.");return}
+  if(DATA.mittagessen.some(x=>x.title.toLowerCase()===title.toLowerCase())){alert("Diese Menügruppe existiert bereits.");return}
+  savedItem={title,type,meat,vegi,tags:[...new Set(tags.concat(type==="fish"?["fisch"]:type==="meat"?["fleisch"]:["vegi"]))],ingredients:$("addIngredients").value,recipe:$("addRecipe").value};
+  DATA.mittagessen.push(savedItem);
+ } else {
+  let name=$("addName").value.trim(); if(!name){alert("Bitte Namen erfassen.");return}
+  if(DATA[cat].some(x=>x.name.toLowerCase()===name.toLowerCase())){alert("Dieses Menü existiert bereits.");return}
+  savedItem={name,tags,ingredients:$("addIngredients").value,recipe:$("addRecipe").value};
+  DATA[cat].push(savedItem);
+ }
+ saveData();
+ await saveNewMenuToCloud(cloudCat,savedItem);
+ alert("Gespeichert."); ["addName","addTitle","addMeat","addVegi","addIngredients","addRecipe"].forEach(id=>$(id).value=""); document.querySelectorAll(".tagbox").forEach(x=>x.checked=false); renderDb(); generatePlan();
+ loadFromCloud();
+}
+function renderDb(){
+ const q=($("searchDb").value||"").toLowerCase();
+ $("dbStats").innerHTML=`<div class="metric"><span>Morgenessen</span><b>${DATA.morgenessen.length}</b></div><div class="metric"><span>Menügruppen</span><b>${DATA.mittagessen.length}</b></div><div class="metric"><span>Z'Vieri</span><b>${DATA.zvieri.length}</b></div>`;
+ let html="<h3>Morgenessen</h3>"+DATA.morgenessen.filter(x=>x.name.toLowerCase().includes(q)).map(x=>`<div class="card">${esc(x.name)} ${pill(x.tags)}</div>`).join("");
+ html+="<h3>Mittagessen-Gruppen</h3>"+DATA.mittagessen.filter(x=>(x.title+x.meat+x.vegi).toLowerCase().includes(q)).map(x=>`<div class="card"><b>${esc(x.title)}</b><br>Fleisch/Fisch: ${esc(x.meat)}<br>Vegi: ${esc(x.vegi)}<br>${pill(x.tags)}</div>`).join("");
+ html+="<h3>Z'Vieri</h3>"+DATA.zvieri.filter(x=>x.name.toLowerCase().includes(q)).map(x=>`<div class="card">${esc(x.name)} ${pill(x.tags)}</div>`).join("");
+ $("dbList").innerHTML=html;
+}
+function pill(a){return (a||[]).map(t=>`<span class="pill">${esc(t)}</span>`).join("")}
+function esc(s){return String(s||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+function planText(){return plan.map(p=>`${p.day}: ${p.morgen.name} | ${p.lunch.title}: Fleisch/Fisch ${p.lunch.meat}; Vegi ${p.lunch.vegi} | Z'Vieri ${p.zvieri.name}`).join("\n")}
+function download(name,text,type){let a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click()}
+
+function weekHtmlDocument(){
+ const rows=plan.map(p=>`<tr>
+ <td>${esc(p.day)}</td>
+ <td>${esc(p.morgen.name)}</td>
+ <td>${esc(p.lunch.meat)}</td>
+ <td>${esc(p.lunch.vegi)}</td>
+ <td>${esc(p.zvieri.name)}</td>
+ </tr>`).join("");
+ const parent=$("parentText").textContent||"";
+ return `<!doctype html><html><head><meta charset="utf-8">
+ <title>Purzelhuus Wochenplan</title>
+ <style>
+ body{font-family:Arial,sans-serif;color:#24351f}
+ h1{color:#3b8c34;text-align:center}
+ table{border-collapse:collapse;width:100%;font-size:12pt}
+ th,td{border:1px solid #999;padding:8px;vertical-align:top}
+ th{background:#dcedc8}
+ .note{margin-top:18px;padding:12px;background:#f5f7f2;border-radius:8px}
+ </style></head><body>
+ <h1>Purzelhuus Menüplan</h1>
+ <table>
+ <thead><tr><th>Tag</th><th>Morgenessen</th><th>Mittagessen Fleisch/Fisch</th><th>Mittagessen Vegi</th><th>Z'Vieri</th></tr></thead>
+ <tbody>${rows}</tbody></table>
+ <div class="note"><b>Elterninformation</b><br>${esc(parent)}</div>
+ </body></html>`;
+}
+function exportWord(){
+ const htmlDoc=weekHtmlDocument();
+ download("Purzelhuus_Wochenplan.doc", htmlDoc, "application/msword");
+}
+function exportPdf(){
+ const w=window.open("", "_blank");
+ w.document.write(weekHtmlDocument());
+ w.document.close();
+ setTimeout(()=>{w.focus(); w.print();}, 400);
+}
+function mailPlan(){
+ const subject=encodeURIComponent("Purzelhuus Menüplan");
+ const body=encodeURIComponent(planText()+"\n\nHinweis: Word/PDF bitte separat aus der App exportieren und bei Bedarf anhängen.");
+ window.location.href=`mailto:glenn.mueller9@me.com?subject=${subject}&body=${body}`;
+}
+
+
+
+function roundRect(ctx,x,y,w,h,r,fill,stroke){
+ if(w<2*r)r=w/2;if(h<2*r)r=h/2;
+ ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();
+ if(fill)ctx.fill();if(stroke)ctx.stroke();
+}
+function fitText(ctx,text,x,y,maxWidth,lineHeight,maxLines){
+ const words=String(text||"").split(" ");
+ let line="",lines=[];
+ for(let i=0;i<words.length;i++){
+   const test=line+words[i]+" ";
+   if(ctx.measureText(test).width>maxWidth && i>0){lines.push(line.trim());line=words[i]+" ";}
+   else line=test;
+ }
+ if(line.trim()) lines.push(line.trim());
+ if(maxLines && lines.length>maxLines){
+   lines=lines.slice(0,maxLines);
+   let last=lines[lines.length-1];
+   while(ctx.measureText(last+" …").width>maxWidth && last.length>3){last=last.slice(0,-1);}
+   lines[lines.length-1]=last+" …";
+ }
+ const startY=y-((lines.length-1)*lineHeight)/2;
+ lines.forEach((l,i)=>ctx.fillText(l,x,startY+i*lineHeight));
+}
+function drawSimpleGnome(ctx,x,y,body,hat,scale=1){
+ ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);
+ ctx.lineWidth=5;ctx.strokeStyle="#111";ctx.lineCap="round";ctx.lineJoin="round";
+ ctx.fillStyle=body;roundRect(ctx,-38,10,76,100,26,true,true);
+ ctx.fillStyle=hat;ctx.beginPath();ctx.moveTo(-56,18);ctx.quadraticCurveTo(0,-92,56,18);ctx.closePath();ctx.fill();ctx.stroke();
+ ctx.fillStyle="#ffe8bd";ctx.beginPath();ctx.arc(0,22,30,0,Math.PI*2);ctx.fill();ctx.stroke();
+ ctx.fillStyle="#111";ctx.beginPath();ctx.arc(-10,18,3,0,Math.PI*2);ctx.arc(10,18,3,0,Math.PI*2);ctx.fill();
+ ctx.beginPath();ctx.arc(0,27,12,0,Math.PI);ctx.stroke();
+ ctx.beginPath();ctx.moveTo(-38,48);ctx.lineTo(-78,18);ctx.moveTo(38,48);ctx.lineTo(78,18);ctx.moveTo(-22,110);ctx.lineTo(-48,146);ctx.moveTo(22,110);ctx.lineTo(48,146);ctx.stroke();
+ ctx.restore();
+}
+function drawHeaderGnomes(ctx){
+ const xs=[105,255,405,675,825,975];
+ const bodies=["#1fb6e9","#f7a516","#47aa3b","#1f377e","#f2b220","#1fb6e9"];
+ const hats=["#40117a","#d71920","#2a8d22","#40117a","#3a9c28","#40117a"];
+ xs.forEach((x,i)=>drawSimpleGnome(ctx,x,105,bodies[i],hats[i],0.55));
+}
+function mealIcon(ctx,x,y,label){
+ const text = label==="morgen" ? "🥣" : label==="fleisch" ? "🍝" : label==="vegi" ? "🥕" : "🍎";
+ ctx.save();ctx.font="42px Arial";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(text,x,y);ctx.restore();
+}
+function storyMealBox(ctx,x,y,w,h,title,text,color,icon){
+ ctx.save();
+ ctx.fillStyle="#ffffff";ctx.strokeStyle=color;ctx.lineWidth=3;roundRect(ctx,x,y,w,h,22,true,true);
+ ctx.fillStyle=color;ctx.font="bold 22px Arial";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(title,x+w/2,y+26);
+ mealIcon(ctx,x+w/2,y+68,icon);
+ ctx.fillStyle="#111";ctx.font="bold 23px Arial";
+ fitText(ctx,text,x+w/2,y+118,w-26,28,3);
+ ctx.restore();
+}
+function drawInstagram(){
+ const c=$("instaCanvas"); if(!c)return;
+ c.width=1080;c.height=1920;
+ const ctx=c.getContext("2d");
+ ctx.clearRect(0,0,1080,1920);
+ ctx.fillStyle="#ffffff";ctx.fillRect(0,0,1080,1920);
+ drawHeaderGnomes(ctx);
+ ctx.fillStyle="#3b8c34";ctx.textAlign="center";ctx.textBaseline="middle";
+ ctx.font="bold 96px Arial";ctx.fillText("Purzelhuus",540,245);
+ ctx.font="bold 38px Arial";ctx.fillText("MENÜPLAN",540,318);
+ const daysColors=["#005db6","#f07e00","#3e963b","#6d42a6","#f4bb23"];
+ const dayNames=["MONTAG","DIENSTAG","MITTWOCH","DONNERSTAG","FREITAG"];
+ const startY=380,rowH=285,gap=22,left=34,right=1046;
+ plan.forEach((p,i)=>{
+   const y=startY+i*(rowH+gap);
+   const color=daysColors[i];
+   ctx.strokeStyle=color;ctx.lineWidth=3;ctx.fillStyle="#ffffff";roundRect(ctx,left,y,right-left,rowH,18,true,true);
+   ctx.fillStyle=color;roundRect(ctx,left,y,165,rowH,18,true,false);
+   ctx.fillStyle="#ffffff";ctx.font="bold 32px Arial";ctx.textAlign="center";ctx.fillText(dayNames[i],left+82,y+44);
+   drawSimpleGnome(ctx,left+82,y+150,i===0?"#1fb6e9":i===1?"#f7a516":i===2?"#47aa3b":i===3?"#1f377e":"#f2b220",i===4?"#3a9c28":i===2?"#2a8d22":i===1?"#d71920":"#40117a",0.58);
+   const boxY=y+12, boxH=rowH-24, boxW=202, x0=left+180;
+   storyMealBox(ctx,x0,boxY,boxW,boxH,"MORGENESSEN",p.morgen.name,color,"morgen");
+   storyMealBox(ctx,x0+boxW+8,boxY,boxW,boxH,"MITTAGESSEN FLEISCH",p.lunch.meat,color,"fleisch");
+   storyMealBox(ctx,x0+(boxW+8)*2,boxY,boxW,boxH,"MITTAGESSEN VEGI",p.lunch.vegi,color,"vegi");
+   storyMealBox(ctx,x0+(boxW+8)*3,boxY,boxW,boxH,"Z’VIERI",p.zvieri.name,color,"zvieri");
+ });
+ // bottom decoration, no slogan
+ drawHeaderGnomes(ctx);
+ ctx.save();ctx.translate(0,1680);drawHeaderGnomes(ctx);ctx.restore();
+}
+function downloadInstagram(){
+ const c=$("instaCanvas"); if(!c)return;
+ const a=document.createElement("a");
+ a.href=c.toDataURL("image/png");
+ a.download="Purzelhuus_Instagram_Story_Menuplan.png";
+ a.click();
+}
+
+function init(){
+ document.querySelectorAll("[data-page]").forEach(b=>b.onclick=()=>{document.querySelectorAll(".page").forEach(p=>p.classList.add("hidden"));$(b.dataset.page).classList.remove("hidden"); if(b.dataset.page==="database")renderDb(); if(b.dataset.page==="shopping")renderShopping(); if(b.dataset.page==="recipes")renderRecipes(); if(b.dataset.page==="instagram")drawInstagram(); if(b.dataset.page==="instagram")drawInstagram();});
+ $("newWeek").onclick=generatePlan;
+ $("instaPlan").onclick=()=>{document.querySelectorAll(".page").forEach(p=>p.classList.add("hidden"));$("instagram").classList.remove("hidden");drawInstagram();};
+ $("wordPlan").onclick=exportWord; $("pdfPlan").onclick=exportPdf; $("mailPlan").onclick=mailPlan;
+ $("makeInsta").onclick=drawInstagram; $("downloadInsta").onclick=downloadInstagram;
+ $("copyShopping").onclick=()=>navigator.clipboard.writeText($("shoppingList").innerText); $("csvShopping").onclick=()=>download("einkaufsliste.txt",$("shoppingList").innerText,"text/plain");
+ $("addCat").onchange=()=>{let lunch=$("addCat").value==="mittagessen"; $("lunchFields").classList.toggle("hidden",!lunch); $("simpleFields").classList.toggle("hidden",lunch)};
+ $("saveMenu").onclick=saveMenu; $("syncCloud").onclick=uploadLocalToCloud; $("reloadCloud").onclick=loadFromCloud; $("resetData").onclick=()=>{if(confirm("Lokale Änderungen löschen?")){localStorage.removeItem("purzelDataV16");DATA=clone(DEFAULT_DATA);generatePlan();}};
+ $("searchDb").oninput=renderDb; $("downloadDb").onclick=()=>download("purzelhuus_datenbank.json",JSON.stringify(DATA,null,2),"application/json"); $("migrateData").onclick=()=>{DATA=migrateOldData();saveData();alert("Alte Daten wurden gesucht und übernommen.");generatePlan();}; $("copyDb").onclick=()=>navigator.clipboard.writeText(JSON.stringify(DATA,null,2));
+ $("importDb").onclick=()=>{try{DATA=JSON.parse($("importBox").value);saveData();alert("Importiert.");generatePlan()}catch(e){alert("Import nicht möglich.")}};
+ if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js?v=16");
+ generatePlan();
+}
+document.addEventListener("DOMContentLoaded",init);
+})();
+</script>
+</body></html>
