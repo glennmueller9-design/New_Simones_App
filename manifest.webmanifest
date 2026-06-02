@@ -1,0 +1,15 @@
+{
+  "name": "Purzelhuus Menüplaner Pro",
+  "short_name": "Menüplaner",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#fffdf7",
+  "theme_color": "#68b342",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
